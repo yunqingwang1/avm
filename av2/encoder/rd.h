@@ -169,6 +169,40 @@ static INLINE void av2_merge_rd_stats(RD_STATS *rd_stats_dst,
 #endif
 }
 
+static INLINE void av2_merge_rd_stats_weighted(RD_STATS *rd_stats_dst,
+                                               const RD_STATS *rd_stats_src) {
+  assert(rd_stats_dst->rate != INT_MAX && rd_stats_src->rate != INT_MAX);
+  if (rd_stats_src->dist == INT64_MAX || rd_stats_src->rate == INT_MAX) return;
+  rd_stats_dst->rate = (int)AVMMIN(
+      ((int64_t)rd_stats_dst->rate + (int64_t)rd_stats_src->rate), INT_MAX);
+  if (!rd_stats_dst->zero_rate)
+    rd_stats_dst->zero_rate = rd_stats_src->zero_rate;
+  rd_stats_dst->dist += rd_stats_src->dist * 15 / 16;
+  if (rd_stats_dst->sse < INT64_MAX && rd_stats_src->sse < INT64_MAX) {
+    rd_stats_dst->sse += rd_stats_src->sse * 15 / 16;
+  }
+  rd_stats_dst->skip_txfm &= rd_stats_src->skip_txfm;
+#if CONFIG_RD_DEBUG
+  // This may run into problems when monochrome video is
+  // encoded, as there will only be 1 plane
+  for (int plane = 0; plane < MAX_MB_PLANE; ++plane) {
+    rd_stats_dst->txb_coeff_cost[plane] += rd_stats_src->txb_coeff_cost[plane];
+    {
+      // TODO(angiebird): optimize this part
+      int r, c;
+      int ref_txb_coeff_cost = 0;
+      for (r = 0; r < TXB_COEFF_COST_MAP_SIZE; ++r)
+        for (c = 0; c < TXB_COEFF_COST_MAP_SIZE; ++c) {
+          rd_stats_dst->txb_coeff_cost_map[plane][r][c] +=
+              rd_stats_src->txb_coeff_cost_map[plane][r][c];
+          ref_txb_coeff_cost += rd_stats_dst->txb_coeff_cost_map[plane][r][c];
+        }
+      assert(ref_txb_coeff_cost == rd_stats_dst->txb_coeff_cost[plane]);
+    }
+  }
+#endif
+}
+
 static INLINE int64_t av2_calculate_rd_cost(int mult, int rate, int64_t dist) {
   assert(mult >= 0);
   if (rate >= 0) {

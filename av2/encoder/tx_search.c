@@ -4644,7 +4644,14 @@ int av2_txfm_search(const AV2_COMP *cpi, MACROBLOCK *x, BLOCK_SIZE bsize,
     const int is_cost_valid_uv =
         av2_txfm_uvrd(cpi, x, rd_stats_uv, ref_best_chroma_rd);
     if (!is_cost_valid_uv) return 0;
-    av2_merge_rd_stats(rd_stats, rd_stats_uv);
+
+    if (cpi->sf.lc_sf.weighted_chroma_distortion) {
+      // Apply weighted distortion/SSE accumulation while merging uv rd stats to
+      // y rd stats.
+      av2_merge_rd_stats_weighted(rd_stats, rd_stats_uv);
+    } else {
+      av2_merge_rd_stats(rd_stats, rd_stats_uv);
+    }
   }
 
   int choose_skip_txfm = rd_stats->skip_txfm;

@@ -1124,6 +1124,11 @@ typedef struct LC_DEC_SPEED_FEATURES {
   // 0: no loop filter skipping.
   // 1: loop filter skipping based on a threshold.
   int skip_loop_filter_based_on_error;
+
+  // Decide whether to enable weighted chroma distortion.
+  //  0: Disable
+  //  1: Enable
+  int weighted_chroma_distortion;
 } LC_DEC_SPEED_FEATURES;
 
 typedef struct FLEXMV_PRECISION_SPEED_FEATURES {
